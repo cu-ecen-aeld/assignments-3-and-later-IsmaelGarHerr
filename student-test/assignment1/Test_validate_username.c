@@ -21,16 +21,9 @@ void test_validate_my_username()
    
      const char* usrName;
      const char* mllcUsrName; 
-     int   count = 0;
     
      usrName     = my_username(); 
      mllcUsrName = malloc_username_from_conf_file(); 
 
-    while(*(usrName+count) != '\0')
-    {
-	count++;
-    }
-       
-
-     TEST_ASSERT_EQUAL_STRING_MESSAGE(usrName,mllcUsrName,count);
+     TEST_ASSERT_EQUAL_STRING_MESSAGE(usrName,mllcUsrName,"User name not equal");
 }
