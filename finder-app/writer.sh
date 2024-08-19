@@ -2,6 +2,7 @@
 
 WRITEFILE=$1
 WRITESTR=$2
+IFS="/"
 
 if [ $# -lt 2 ] 
 then
@@ -9,7 +10,19 @@ then
      exit 1
 
 else
-     touch "$WRITEFILE.txt" || exit 1
+     read -ra array <<< "$WRITEFILE"
+     SIZE=${#array[@]}
+     for (( i=0; i<="$SIZE"; i+=1 ))
+     do
+        if [ "$i" -eq "$SIZE" ]
+        then
+            touch "${array[$i]}"
+        else
+            mkdir "${array[$i]}"
+            cd "${array[$i]}" || exit 1
+        fi
+     done
+     touch "$WRITEFILE" || exit 1
      echo "$WRITESTR" > "$WRITEFILE" 
 
 fi
