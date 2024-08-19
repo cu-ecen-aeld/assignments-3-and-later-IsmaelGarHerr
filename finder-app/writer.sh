@@ -9,7 +9,8 @@ then
      exit 1
 
 else
-     touch "$WRITEFILE.txt" && echo "$WRITESTR" > "$WRITEFILE"
+     touch "$WRITEFILE.txt" || exit 1
+     echo "$WRITESTR" > "$WRITEFILE" 
 
 fi
 
