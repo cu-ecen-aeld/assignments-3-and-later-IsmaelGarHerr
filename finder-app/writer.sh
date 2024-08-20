@@ -13,9 +13,9 @@ else
      read -ra array <<< "$WRITEFILE"
      ARRAYSIZE=${#array[@]}
      FILENAME=${array[ARRAYSIZE]}
-     PATH=${WRITESTR:0:((${#WRITESTR})-(${#FILENAME}))}
+     PATH=${WRITEFILE:0:((${#WRITEFILE})-(${#FILENAME}))}
 
-     mkdir -p "${PATH}"
+     mkdir -p "$PATH"
      cd "${PATH}" || exit 1
 
      if [ -e "${FILENAME}" ]
