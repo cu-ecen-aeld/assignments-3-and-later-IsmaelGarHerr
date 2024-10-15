@@ -1,4 +1,13 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <syslog.h>
+
+#define TERMINATION_STATUS_SUCCESS 0u
+#define TERMINATION_STATUS_FAILED  -1
 
 /**
  * @param cmd the command to execute with system()
@@ -16,8 +25,21 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    bool retVal = false;
+    int  cmdRet = 0;
 
-    return true;
+    cmdRet = system(cmd);
+
+    if(cmdRet == TERMINATION_STATUS_SUCCESS)
+    {
+        retVal = true;
+    }
+    else
+    {
+        /*retVal stays as FALSE*/
+    }
+
+    return retVal;
 }
 
 /**
@@ -40,6 +62,8 @@ bool do_exec(int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    int retVal = false;
+    int status;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -61,7 +85,41 @@ bool do_exec(int count, ...)
 
     va_end(args);
 
-    return true;
+    openlog("SysCalls do_exec()", LOG_PID | LOG_CONS, LOG_DEBUG);
+
+    pid_t pid = fork();
+
+    if(pid == TERMINATION_STATUS_FAILED)
+    {
+        syslog(LOG_ERR, "Can not start new child process");
+    }
+    else
+    {
+        syslog(LOG_INFO, "Child process started");
+        int exec = execv(command[0], command);
+
+        if(exec == TERMINATION_STATUS_FAILED)
+        {
+            syslog(LOG_ERR, "Can not execute command: %s", command[0]);
+            exit(1);
+        }
+        else
+        {
+            wait(&status);
+            if(status == TERMINATION_STATUS_SUCCESS)
+            {
+                syslog(LOG_INFO, "Child process finished successfully");
+                retVal = true;
+            }
+            else
+            {
+                syslog(LOG_ERR, "Child Process not finished correctly");
+            }
+        }
+    }
+
+    closelog();
+    return retVal;
 }
 
 /**
@@ -75,6 +133,9 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     va_start(args, count);
     char * command[count+1];
     int i;
+    int retVal = false;
+    int status;
+    int fd;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -95,5 +156,55 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
     va_end(args);
 
-    return true;
+    openlog("SysCalls do_exec()", LOG_PID | LOG_CONS, LOG_DEBUG);
+
+    fd = open(outputfile, O_WRONLY);
+
+    if(fd == -1)
+    {
+        syslog(LOG_ERR, "Can not open file %s", outputfile);
+    }
+    else
+    {
+        if(dup2(fd, 1) < 0)
+        {
+            syslog(LOG_ERR, "Can not redirect stdout to file");
+        }
+        else
+        {
+            pid_t pid = fork();
+            if(pid == TERMINATION_STATUS_FAILED)
+            {
+                syslog(LOG_ERR, "Can not start new child process");
+            }
+            else
+            {
+               syslog(LOG_INFO, "Child process started");
+               int exec = execv(command[0], command);
+               if(exec == TERMINATION_STATUS_FAILED)
+               {
+                   syslog(LOG_ERR, "Can not execute command: %s", command[0]);
+                   exit(1);
+               }
+               else
+               {
+                   wait(&status);
+                   if(status == TERMINATION_STATUS_SUCCESS)
+                   {
+                       syslog(LOG_INFO, "Child process finished successfully");
+                       retVal = true;
+                   }
+                   else
+                   {
+                       syslog(LOG_ERR, "Child Process not finished correctly");
+                   }
+               }
+            }
+  
+        }
+    }
+
+    
+    closelog();
+    return retVal;
 }
